@@ -781,6 +781,20 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as e:
             print(f"אזהרה: כתיבה ל-summary נכשלה: {e}", file=sys.stderr)
 
+    # פלט ל-GitHub Actions — מאפשר לשלוח את הדוח במייל רק כשמשהו השתנה
+    gh_output = os.environ.get("GITHUB_OUTPUT")
+    if gh_output:
+        has_changes = bool(changes["added"] or changes["changed"] or changes["removed"])
+        try:
+            with open(gh_output, "a", encoding="utf-8") as f:
+                f.write(f"report_path={report_path}\n")
+                f.write(f"has_changes={'true' if has_changes else 'false'}\n")
+                f.write(f"added_count={len(changes['added'])}\n")
+                f.write(f"changed_count={len(changes['changed'])}\n")
+                f.write(f"removed_count={len(changes['removed'])}\n")
+        except OSError as e:
+            print(f"אזהרה: כתיבה ל-GITHUB_OUTPUT נכשלה: {e}", file=sys.stderr)
+
     print(f"נותחו {len(pages)} דפי HSP. הדוח נכתב אל: {report_path}")
     for p in pages:
         if p.error:

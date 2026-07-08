@@ -32,6 +32,7 @@ jobs:
           python-version: "3.12"
 
       - name: Run StoryBrand audit
+        id: audit
         run: python3 tools/hsp_storybrand_audit.py --root . --pattern hsp --report-dir hsp/reports
 
       - name: Upload report artifact
@@ -53,3 +54,33 @@ jobs:
             git commit -m "docs: add HSP StoryBrand audit report [skip ci]"
             git push
           fi
+
+      # שליחת הדוח במייל בכל פעם שקובץ HSP נוסף או השתנה.
+      # דורש הגדרת סודות בריפו (Settings ← Secrets and variables ← Actions):
+      #   MAIL_USERNAME, MAIL_PASSWORD, MAIL_SERVER (אופציונלי, ברירת מחדל Gmail),
+      #   MAIL_PORT (אופציונלי, ברירת מחדל 465)
+      - name: Send report by email
+        if: github.event_name == 'push' && steps.audit.outputs.has_changes == 'true'
+        continue-on-error: true
+        id: mail
+        uses: dawidd6/action-send-mail@v17
+        with:
+          server_address: ${{ secrets.MAIL_SERVER || 'smtp.gmail.com' }}
+          server_port: ${{ secrets.MAIL_PORT || 465 }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: >-
+            דוח StoryBrand HSP —
+            ${{ steps.audit.outputs.added_count }} נוספו,
+            ${{ steps.audit.outputs.changed_count }} השתנו,
+            ${{ steps.audit.outputs.removed_count }} נמחקו
+          to: haim@zug.org.il
+          from: HSP StoryBrand Bot <${{ secrets.MAIL_USERNAME }}>
+          body: file://hsp/reports/latest.md
+          convert_markdown: true
+          attachments: ${{ steps.audit.outputs.report_path }}
+
+      - name: Email status
+        if: github.event_name == 'push' && steps.audit.outputs.has_changes == 'true' && steps.mail.outcome == 'failure'
+        run: |
+          echo "::warning::שליחת המייל נכשלה — ודאו שהסודות MAIL_USERNAME ו-MAIL_PASSWORD מוגדרים בריפו (Settings -> Secrets and variables -> Actions)."
