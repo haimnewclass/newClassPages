@@ -1,0 +1,55 @@
+name: HSP StoryBrand Audit
+
+# הסוכן רץ אוטומטית בכל פעם שקובץ HTML של HSP משתנה או מתווסף,
+# וכן כשמעדכנים את סקריפט הניתוח עצמו. אפשר גם להריץ ידנית.
+on:
+  push:
+    paths:
+      - "**/*hsp*.html"
+      - "**/*HSP*.html"
+      - "**/*hsp*/**/*.html"
+      - "tools/hsp_storybrand_audit.py"
+  pull_request:
+    paths:
+      - "**/*hsp*.html"
+      - "**/*HSP*.html"
+      - "**/*hsp*/**/*.html"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run StoryBrand audit
+        run: python3 tools/hsp_storybrand_audit.py --root . --pattern hsp
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hsp-storybrand-report
+          path: reports/
+
+      # בדחיפה לענף (לא ב-PR) — מקמט את הדוח המעודכן חזרה לריפו
+      - name: Commit updated report
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/
+          if git diff --cached --quiet; then
+            echo "No report changes to commit."
+          else
+            git commit -m "docs: update HSP StoryBrand audit report [skip ci]"
+            git push
+          fi
