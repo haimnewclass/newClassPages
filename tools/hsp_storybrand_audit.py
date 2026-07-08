@@ -11,10 +11,14 @@ HSP StoryBrand Landing Page Auditor
   * אילו סוגי קהל יאהבו את הדף ואילו יירתעו ממנו
   * מעקב שינויים: מה נוסף / השתנה / נמחק מאז הריצה הקודמת
 
+הדוחות נשמרים בתיקייה hsp/reports/ — קובץ נפרד לכל ריצה, עם תאריך ושעה בשם
+הקובץ (למשל hsp/reports/storybrand-report_2026-07-08_15-42.md), כך שנשמרת
+היסטוריה מלאה של כל הבדיקות.
+
 שימוש:
   python3 tools/hsp_storybrand_audit.py
   python3 tools/hsp_storybrand_audit.py --root . --pattern hsp \
-      --report reports/hsp-storybrand-report.md
+      --report-dir hsp/reports
 
 הסקריפט משתמש בספרייה הסטנדרטית בלבד (אין צורך ב-pip install).
 """
@@ -31,6 +35,16 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
+
+try:
+    from zoneinfo import ZoneInfo
+    LOCAL_TZ = ZoneInfo("Asia/Jerusalem")
+except Exception:
+    LOCAL_TZ = timezone.utc
+
+
+def local_now() -> datetime:
+    return datetime.now(LOCAL_TZ)
 
 # ---------------------------------------------------------------------------
 # חילוץ טקסט ומבנה מתוך HTML
@@ -621,7 +635,7 @@ def score_bar(score: float, out_of: float = 10) -> str:
 
 
 def render_report(pages: list[PageAnalysis], changes: dict, pattern: str) -> str:
-    now = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC")
+    now = local_now().strftime("%d/%m/%Y %H:%M (שעון ישראל)")
     lines: list[str] = []
     lines.append('<div dir="rtl">\n')
     lines.append("# דוח StoryBrand — דפי נחיתה HSP")
@@ -734,9 +748,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--root", default=".", help="תיקיית השורש לסריקה")
     ap.add_argument("--pattern", default="hsp",
                     help="מחרוזת שחייבת להופיע בנתיב הקובץ (ברירת מחדל: hsp)")
-    ap.add_argument("--report", default="reports/hsp-storybrand-report.md",
-                    help="נתיב קובץ הדוח")
-    ap.add_argument("--state", default="reports/.hsp_audit_state.json",
+    ap.add_argument("--report-dir", default="hsp/reports",
+                    help="תיקיית הדוחות — לכל ריצה נוצר קובץ עם תאריך ושעה בשם")
+    ap.add_argument("--state", default="hsp/reports/.hsp_audit_state.json",
                     help="קובץ מצב למעקב שינויים בין ריצות")
     ap.add_argument("--summary-file", default=os.environ.get("GITHUB_STEP_SUMMARY"),
                     help="קובץ נוסף לכתיבת הדוח (למשל GITHUB_STEP_SUMMARY)")
@@ -751,9 +765,13 @@ def main(argv: list[str] | None = None) -> int:
     changes = diff_state(old_state, pages)
 
     report = render_report(pages, changes, args.pattern)
-    report_path = Path(args.report)
-    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_dir = Path(args.report_dir)
+    report_dir.mkdir(parents=True, exist_ok=True)
+    stamp = local_now().strftime("%Y-%m-%d_%H-%M-%S")
+    report_path = report_dir / f"storybrand-report_{stamp}.md"
     report_path.write_text(report, encoding="utf-8")
+    # עותק "אחרון" קבוע — נוח לקישור מה-README ולצפייה מהירה
+    (report_dir / "latest.md").write_text(report, encoding="utf-8")
     save_state(state_path, pages)
 
     if args.summary_file:

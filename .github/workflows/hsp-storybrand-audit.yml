@@ -32,24 +32,24 @@ jobs:
           python-version: "3.12"
 
       - name: Run StoryBrand audit
-        run: python3 tools/hsp_storybrand_audit.py --root . --pattern hsp
+        run: python3 tools/hsp_storybrand_audit.py --root . --pattern hsp --report-dir hsp/reports
 
       - name: Upload report artifact
         uses: actions/upload-artifact@v4
         with:
           name: hsp-storybrand-report
-          path: reports/
+          path: hsp/reports/
 
-      # בדחיפה לענף (לא ב-PR) — מקמט את הדוח המעודכן חזרה לריפו
-      - name: Commit updated report
+      # בדחיפה לענף (לא ב-PR) — מקמט את הדוח החדש (עם תאריך ושעה בשם) חזרה לריפו
+      - name: Commit new report
         if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add reports/
+          git add hsp/reports/
           if git diff --cached --quiet; then
             echo "No report changes to commit."
           else
-            git commit -m "docs: update HSP StoryBrand audit report [skip ci]"
+            git commit -m "docs: add HSP StoryBrand audit report [skip ci]"
             git push
           fi

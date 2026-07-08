@@ -35,7 +35,19 @@
 - בכל Pull Request שנוגע בקבצים כאלה;
 - וגם ידנית מלשונית **Actions ‏← HSP StoryBrand Audit ← Run workflow**.
 
-בדחיפה לענף, הדוח המעודכן נכתב אל [`reports/hsp-storybrand-report.md`](reports/hsp-storybrand-report.md) ומוקמט אוטומטית חזרה לריפו, וכן מוצג בעמוד הסיכום של הריצה ב-Actions.
+### איפה נשמרים הדוחות
+
+כל הדוחות נשמרים בתיקייה **[`hsp/reports/`](hsp/reports/)** — קובץ נפרד לכל ריצה, עם תאריך ושעה (שעון ישראל) בשם הקובץ, כך שנשמרת היסטוריה מלאה של כל הבדיקות:
+
+```
+hsp/reports/
+├── storybrand-report_2026-07-08_15-53-39.md
+├── storybrand-report_2026-07-10_09-12-05.md
+├── ...
+└── latest.md   ← תמיד עותק של הדוח האחרון
+```
+
+בדחיפה לענף, הדוח החדש מוקמט אוטומטית חזרה לריפו, וכן מוצג בעמוד הסיכום של הריצה ב-Actions.
 
 ### הרצה מקומית
 
@@ -46,7 +58,7 @@ python3 tools/hsp_storybrand_audit.py
 אין תלויות חיצוניות — נדרש רק Python 3.10+. אפשרויות שימושיות:
 
 ```bash
-python3 tools/hsp_storybrand_audit.py --pattern hsp --report reports/hsp-storybrand-report.md
+python3 tools/hsp_storybrand_audit.py --pattern hsp --report-dir hsp/reports
 ```
 
 ### קובץ דוגמה
